@@ -1,0 +1,74 @@
+// RankLocal — Prisma schema
+//
+// Single `Audit` model holds both the public report (mapped into AuditResult
+// on read) and the internal pipeline state (input, raw API payloads, IP for
+// rate-limiting, current pipeline step). Nested structures (categoryScores,
+// recommendations, competitors, matchedBusinesses, input, rawData) are
+// stored as JSONB so the rich `AuditResult` shape from src/types/audit.ts
+// round-trips cleanly without N tables for v1.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuditStatus {
+  pending
+  processing
+  completed
+  failed
+}
+
+model Audit {
+  id String @id @default(cuid())
+
+  // ---- Public report fields (map to AuditResult) ----
+  businessName        String?
+  address             String?
+  primaryCategory     String?
+  isVerified          Boolean @default(false)
+  isPermanentlyClosed Boolean @default(false)
+  hasWebsite          Boolean @default(false)
+  websiteUrl          String?
+  websiteLoadTime     Float?
+  mobileFriendly      Boolean?
+  overallScore        Int?
+  overallRating       String?
+
+  // JSONB blobs — see src/types/audit.ts for the precise shapes.
+  categoryScores    Json? // CategoryScore[]
+  recommendations   Json? // AiRecommendation[]
+  competitors       Json? // CompetitorData[]
+  matchedBusinesses Json? // MatchedBusiness[] (only set when find step returns multiple)
+
+  hasEverPosted  Boolean @default(false)
+  postsSupported Boolean @default(true)
+
+  // ---- Pipeline state ----
+  status      AuditStatus @default(pending)
+  currentStep String? //  "find" | "profile" | "competitors" | "scoring" | "plan"
+  errorType   String? //  "not-found" | "timeout" | "rate-limit" | "failure"
+
+  // ---- Internal-only ----
+  // input: { businessName, websiteUrl, location, email, phone?, competitors? }
+  input           Json
+  // rawData: { googlePlaces?, pageSpeed?, competitorPlaces? } — kept for debugging.
+  rawData         Json    @default("{}")
+  ipAddress       String
+  selectedPlaceId String?
+  email           String
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  @@index([ipAddress, createdAt]) // rate-limit lookups
+  @@index([status]) // monitoring / cleanup cron
+  @@index([email]) // follow-up email queries
+  @@index([createdAt]) // age-based cleanup
+  @@map("audits")
+}
