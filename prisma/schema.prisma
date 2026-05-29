@@ -13,7 +13,11 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Runtime connection — Supabase transaction pooler (pgbouncer, port 6543).
   url      = env("DATABASE_URL")
+  // Migrations / db push — Supabase session pooler (direct, port 5432).
+  // pgbouncer's transaction mode can't run DDL, so schema changes go here.
+  directUrl = env("DIRECT_URL")
 }
 
 enum AuditStatus {
