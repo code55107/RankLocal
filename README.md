@@ -93,11 +93,18 @@ A cron in `AuditCleanupService` runs every minute and flips audits stuck past `A
 
 ## Endpoints
 
-| Method | Path | Description |
-|---|---|---|
-| `GET`  | `/api/v1/health` | Liveness check |
-| `POST` | `/api/v1/audit` | Submit a new audit. Returns `{ auditId }`; pipeline runs in background |
-| `GET`  | `/api/v1/audit/:id` | Poll audit status — discriminated union (`pending` / `processing` / `completed` / `failed` / `multiple_matches`) |
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `GET`  | `/api/v1/health` | — | Liveness check |
+| `POST` | `/api/v1/auth/register` | — | Create an email/password account, returns `{ token, user }` |
+| `POST` | `/api/v1/auth/login` | — | Authenticate with email/password, returns `{ token, user }` |
+| `POST` | `/api/v1/auth/logout` | Bearer | Invalidate the current session (idempotent), returns `{ success: true }` |
+| `GET`  | `/api/v1/auth/session` | Bearer | Return the authenticated user, returns `{ user }` |
+| `POST` | `/api/v1/auth/google` | — | Exchange a Google OAuth code for a session, returns `{ token, user }` |
+| `POST` | `/api/v1/audit` | — | Submit a new audit. Returns `{ auditId }`; pipeline runs in background |
+| `GET`  | `/api/v1/audit/:id` | — | Poll audit status — discriminated union (`pending` / `processing` / `completed` / `failed` / `multiple_matches`) |
+
+> Auth endpoints return the raw shapes above (per `backend-auth-spec.md`), **not** the audit `{ success, data }` envelope. Sessions are opaque server-side tokens (`sess_<uuid>`) stored in the `sessions` table with a 30-day expiry; the backend never sets cookies — the frontend BFF owns cookie management and sends `Authorization: Bearer {token}`. Passwords are bcrypt-hashed (cost 12). Error codes: `VALIDATION_ERROR` (400), `EMAIL_EXISTS` (409), `INVALID_CREDENTIALS` / `UNAUTHORIZED` (401), `INVALID_CODE` (400), `GOOGLE_ERROR` (500).
 
 ### `POST /api/v1/audit`
 

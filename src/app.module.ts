@@ -7,6 +7,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { configValidationSchema } from './config/env.schema';
 import { PrismaModule } from './prisma/prisma.module';
 import { ExternalModule } from './external/external.module';
+import { AuthModule } from './auth/auth.module';
 import { AuditModule } from './audit/audit.module';
 import { HealthController } from './app.controller';
 
@@ -42,6 +43,7 @@ import { HealthController } from './app.controller';
     ),
     PrismaModule,
     ExternalModule,
+    AuthModule,
     AuditModule,
   ],
   controllers: [HealthController],

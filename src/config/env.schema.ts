@@ -20,6 +20,12 @@ export const configValidationSchema = Joi.object({
 
   ANTHROPIC_API_KEY: Joi.string().required(),
 
+  // Google OAuth (backend-auth-spec.md). Optional so the app boots without
+  // Google sign-in configured; POST /auth/google returns GOOGLE_ERROR (500)
+  // until both are set.
+  GOOGLE_CLIENT_ID: Joi.string().optional().allow(''),
+  GOOGLE_CLIENT_SECRET: Joi.string().optional().allow(''),
+
   // Resend is optional — pipeline still completes if mail fails. Joi keeps it
   // optional so dev environments without a key can still run audits end-to-end.
   RESEND_API_KEY: Joi.string().optional().allow(''),
